@@ -92,7 +92,8 @@ def train(config_path,dataset_dir,output,*,resume=None,smoke=False,allow_synthet
         temporary=path/"state.tmp"; torch.save(state,temporary); temporary.replace(path/"state.pt")
         model.encoder.config.save_pretrained(path/"encoder_config")
         tokenizer.save_pretrained(path/"tokenizer")
-        (path/"resume_manifest.json").write_text(json.dumps({"fingerprint":fingerprint,"state_sha256":sha(path/"state.pt"),"dataset_manifest":dataset_manifest},indent=2))
+        (path/"resume_manifest.json").write_text(json.dumps({"fingerprint":fingerprint,"state_sha256":sha(path/"state.pt"),"dataset_manifest":dataset_manifest,
+            "encoder_attention_implementation":model.encoder.config._attn_implementation},indent=2))
         (path/"COMPLETE").write_text("1\n")
         return path
     stopped=False

@@ -24,6 +24,7 @@ def export_model(model,tokenizer,directory,*,trained,metrics=None,dataset_manife
     manifest={"schema_version":1,"training_status":"trained" if trained else "untrained",
               "encoder":model.config.encoder,"encoder_revision":model.config.encoder_revision,
               "encoder_mode":model.config.encoder_mode,"parameter_counts":model.parameter_counts(),
+              "encoder_attention_implementation":model.encoder.config._attn_implementation,
               "python":platform.python_version(),"torch":torch.__version__,"metrics":metrics or {},
               "dataset_manifest":dataset_manifest,"scores_calibrated":False,
               "architecture":"shared encoder + candidate contextualizer + parallel supervised heads",
@@ -44,7 +45,9 @@ def load_model(directory,*,allow_untrained=False,device="cpu"):
     config=ModelConfig.model_validate_json((root/"model_config.json").read_text())
     if manifest["encoder_revision"]!=config.encoder_revision: raise ValueError("encoder revision mismatch")
     encoder_config=AutoConfig.from_pretrained(root/"encoder_config",local_files_only=True,trust_remote_code=False)
-    encoder=AutoModel.from_config(encoder_config,trust_remote_code=False)
+    attention=manifest.get("encoder_attention_implementation")
+    kwargs={"attn_implementation":attention} if attention is not None else {}
+    encoder=AutoModel.from_config(encoder_config,trust_remote_code=False,**kwargs)
     model=DAMADecisionModel(config,encoder=encoder,load_pretrained=False)
     model.load_state_dict(load_file(str(root/"model.safetensors")),strict=True)
     tokenizer=AutoTokenizer.from_pretrained(root/"tokenizer",local_files_only=True,trust_remote_code=False)
@@ -57,7 +60,9 @@ def export_checkpoint(checkpoint,directory):
         raise ValueError("incomplete or corrupt checkpoint")
     config=ModelConfig.model_validate(metadata["fingerprint"]["config"]["model"])
     encoder_config=AutoConfig.from_pretrained(root/"encoder_config",local_files_only=True,trust_remote_code=False)
-    model=DAMADecisionModel(config,encoder=AutoModel.from_config(encoder_config,trust_remote_code=False),load_pretrained=False)
+    attention=metadata.get("encoder_attention_implementation")
+    kwargs={"attn_implementation":attention} if attention is not None else {}
+    model=DAMADecisionModel(config,encoder=AutoModel.from_config(encoder_config,trust_remote_code=False,**kwargs),load_pretrained=False)
     state=torch.load(root/"state.pt",map_location="cpu",weights_only=True)
     model.load_state_dict(state["model"],strict=True)
     tokenizer=AutoTokenizer.from_pretrained(root/"tokenizer",local_files_only=True,trust_remote_code=False)
