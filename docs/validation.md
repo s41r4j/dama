@@ -79,6 +79,17 @@ No training output directory was created by this command.
 
 ## Unverified and remaining research work
 
+Colab LoRA round-trip follow-up: the user reported 32 passing tests and one
+logit-comparison failure after setup/config/data validation completed. Local
+diagnostics reproduced an SDPA-to-eager attention change on artifact reload,
+despite exactly equal state tensors and eval mode on every module. On the local
+machine this produced head differences of roughly 1e-8 to 1e-7. Exported artifacts
+and checkpoint metadata now retain the encoder attention implementation; loading
+and checkpoint export restore it explicitly. The LoRA test compares every weight
+exactly and all output heads with explicit FP32 tolerances. Eager/SDPA checkpoint
+export checks run without training. All 35 tests passed locally in 3.10s; the
+updated suite still needs a Colab rerun.
+
 Colab setup repair: the user's runtime log confirms a T4 GPU and failure in
 `venv`'s `ensurepip` subprocess. Setup now uses `--without-pip` and the notebook's
 pip `--python` option, including for partial environments. The target environment

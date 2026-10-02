@@ -2,7 +2,7 @@ import json
 import platform
 import torch
 import pytest
-from dama.artifacts import export_model,load_model
+from dama.artifacts import export_checkpoint,export_model,load_model
 from dama.batching import Collator,InputOverflow
 from dama.contracts import Candidate,Decision,Example,Label,ModelConfig,ModelInput,Scope,Span,TrainConfig
 from dama.data import fixtures,prepare,sha,validate
@@ -134,6 +134,8 @@ def test_checkpoint_roundtrip_requires_untrained_optin(network,tmp_path):
     model,tokenizer=network; root=tmp_path/"artifact"; manifest=export_model(model,tokenizer,root,trained=False)
     with pytest.raises(ValueError,match="untrained"): load_model(root)
     restored,tok,m=load_model(root,allow_untrained=True)
+    assert m["encoder_attention_implementation"]==model.encoder.config._attn_implementation
+    assert restored.encoder.config._attn_implementation==model.encoder.config._attn_implementation
     x=fixtures()[1].input
     first,_=Predictor(model,tokenizer,version="test").predict(x); second,_=Predictor(restored,tok,version="test").predict(x)
     assert first.selected_ids==second.selected_ids and first.operation==second.operation
@@ -166,8 +168,41 @@ def test_lora_forward_and_artifact_without_training(network,tmp_path):
     assert any(p.requires_grad for p in model.encoder.parameters())
     root=tmp_path/"lora-artifact"; export_model(model,tokenizer,root,trained=False)
     restored,_,_=load_model(root,allow_untrained=True)
+    assert restored.encoder.config._attn_implementation==model.encoder.config._attn_implementation
+    for name,weight in model.state_dict().items():
+        assert torch.equal(weight,restored.state_dict()[name]),name
     with torch.inference_mode(): second=restored(**batch["model_inputs"])
-    assert torch.allclose(outputs["operation_logits"],second["operation_logits"])
+    for head in outputs:
+        torch.testing.assert_close(outputs[head],second[head],rtol=1e-5,atol=1e-6)
+
+@pytest.mark.parametrize("attention",["eager","sdpa"])
+def test_checkpoint_export_preserves_attention_without_training(network,tmp_path,attention):
+    from transformers import BertModel
+    base,tokenizer=network
+    base.encoder.config._attn_implementation=attention
+    model=DAMADecisionModel(base.config,encoder=BertModel(base.encoder.config),load_pretrained=False).eval()
+    checkpoint=tmp_path/"checkpoint"
+    checkpoint.mkdir()
+    model.encoder.config.save_pretrained(checkpoint/"encoder_config")
+    tokenizer.save_pretrained(checkpoint/"tokenizer")
+    # A forward-only fixture checkpoint: no optimizer or backward pass.
+    torch.save({"model":model.state_dict(),"step":0},checkpoint/"state.pt")
+    (checkpoint/"resume_manifest.json").write_text(json.dumps({
+        "fingerprint":{"config":{"model":model.config.model_dump()}},
+        "state_sha256":sha(checkpoint/"state.pt"),"dataset_manifest":{},
+        "encoder_attention_implementation":attention}))
+    (checkpoint/"COMPLETE").write_text("1\n")
+    export=tmp_path/"export"
+    export_checkpoint(checkpoint,export)
+    restored,_,manifest=load_model(export,allow_untrained=True)
+    assert manifest["encoder_attention_implementation"]==attention
+    assert restored.encoder.config._attn_implementation==attention
+    batch=Collator(tokenizer,model.config)([fixtures()[1]])
+    with torch.inference_mode():
+        first=model(**batch["model_inputs"])
+        second=restored(**batch["model_inputs"])
+    for head in first:
+        torch.testing.assert_close(first[head],second[head],rtol=1e-5,atol=1e-6)
 
 def test_nonfinite_logits_abstain(network):
     model,tokenizer=network; x=fixtures()[0].input; batch=Collator(tokenizer,model.config)([x]); outputs=forced_output(batch)

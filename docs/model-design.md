@@ -53,6 +53,8 @@ invalid targets/spans abstain; scores explicitly uncalibrated
 No token-by-token decoder, generated rationale, answering model, database or agent
 loop is involved. The encoder runs over event and candidate texts as one batched
 invocation; a contextualizer lets write decisions see possible duplicates/updates.
+Model artifacts record and restore the encoder attention implementation (eager or
+SDPA) to avoid changing the inference kernel silently after loading a checkpoint.
 Cost scales with candidate count and sequence length, not just head parameters.
 A single forward invocation is not constant-time with respect to input size.
 
