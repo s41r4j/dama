@@ -8,6 +8,15 @@ import subprocess
 import sys
 
 
+def prepare_environment(run, interpreter, env_dir):
+    # Colab's system Python can create a venv but may lack working ensurepip.
+    # Re-running without --clear repairs a partial venv without deleting packages.
+    run([interpreter, "-m", "venv", "--without-pip", env_dir])
+    python = env_dir / "bin/python"
+    pip = [interpreter, "-m", "pip", "--python", str(python)]
+    return python, pip
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--source", type=Path, default=Path(__file__).resolve().parents[1])
@@ -42,15 +51,13 @@ def main():
 
         run(["nvidia-smi"])
         # Reuse Colab's Python version; isolate model libraries from the kernel.
-        python = args.env / "bin/python"
-        if not python.exists():
-            run([sys.executable, "-m", "venv", args.env])
+        python, pip = prepare_environment(run, sys.executable, args.env)
         run([python, "-c", "import sys; print(sys.version); "
              f"assert sys.version_info[:2] == {sys.version_info[:2]!r}"])
-        run([python, "-m", "pip", "install",
+        run([*pip, "install",
              "-r", source / "scripts/requirements-colab.txt"])
-        run([python, "-m", "pip", "install", "-e", source])
-        run([python, "-m", "pip", "check"])
+        run([*pip, "install", "-e", source])
+        run([*pip, "check"])
         run([python, "-c", "import torch, transformers, peft; "
              "from dama.training import runtime; "
              "print({'torch': torch.__version__, 'transformers': transformers.__version__, "

@@ -79,6 +79,15 @@ No training output directory was created by this command.
 
 ## Unverified and remaining research work
 
+Colab setup repair: the user's runtime log confirms a T4 GPU and failure in
+`venv`'s `ensurepip` subprocess. Setup now uses `--without-pip` and the notebook's
+pip `--python` option, including for partial environments. The target environment
+receives its own pinned pip through the requirements file. An offline integration
+check installs a local probe wheel into a pip-less environment and verifies that
+a retry preserves it. All 33 tests passed in 3.50s locally. Notebook subprocess
+output is streamed through Python stdout for readable Colab diagnostics. Actual
+CUDA setup still needs a successful user rerun.
+
 Model-only repository preparation: the superseded orchestration prototype was
 removed; reference collections and historical snapshots are excluded from Git.
 The notebook now fetches GitHub updates and runs isolated setup, config/data

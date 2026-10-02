@@ -29,6 +29,9 @@ x86-64 wheels. Full import/dependency/CUDA checks still have to pass in Colab.
 **CUDA execution has not been tested in this session.** No environment is
 advertised as CUDA-verified. No kernel restart or Python downgrade is required.
 Setup writes `/content/dama-setup.log` and starts no training.
+The environment is created with `venv --without-pip`; the notebook interpreter's
+pip manages it through `--python`, so Colab's missing/broken `ensurepip` does not
+block setup. Re-running repairs a partial environment without clearing packages.
 
 Notebook commands use `/content/dama-env/bin/python -m dama`. When using a Colab
 terminal, prefix the CLI examples below with that path instead of bare `dama`.
