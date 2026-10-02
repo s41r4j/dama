@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "version": "synthetic-model-v1",
+  "synthetic": true,
+  "license": "CC0-1.0",
+  "files": {
+    "train.jsonl": {
+      "sha256": "e5569729324dd726c15e95d46fb09b588a0b3f2ae687ee9a7d3856edeedbac86",
+      "count": 56
+    },
+    "dev.jsonl": {
+      "sha256": "2dad44bf569aabe9ee428a34205cf51d49ae1710467b5a3c3d2e162f1e388082",
+      "count": 12
+    },
+    "test.jsonl": {
+      "sha256": "f87a8057e839916fd993852c41c5efd288615ea23ca97ea5fca585af22b844f5",
+      "count": 12
+    }
+  },
+  "families": {
+    "emotional": "train",
+    "missing_evidence": "train",
+    "preference": "train",
+    "casual": "train",
+    "fact": "train",
+    "duplicate": "train",
+    "correction_preference": "train",
+    "paraphrase": "train",
+    "assistant_claim": "train",
+    "conflict": "train",
+    "injection": "train",
+    "similar_irrelevant": "train",
+    "plan": "train",
+    "archive": "train",
+    "correction": "dev",
+    "routine": "dev",
+    "historical": "dev",
+    "tight_budget": "test",
+    "unsupported": "test",
+    "ambiguous": "test"
+  },
+  "split_method": "whole family/conversation/user/project; fixed hash seed dama-model-v1",
+  "status": "80 software fixtures, NOT sufficient research training data; human review pending"
+}

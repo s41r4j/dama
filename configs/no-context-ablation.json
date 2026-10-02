@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "model": {
+    "schema_version": 1,
+    "encoder": "sentence-transformers/all-MiniLM-L6-v2",
+    "encoder_revision": "1110a243fdf4706b3f48f1d95db1a4f5529b4d41",
+    "hidden_dim": 192,
+    "context_layers": 0,
+    "attention_heads": 4,
+    "max_length": 256,
+    "max_candidates": 32,
+    "encoder_mode": "frozen"
+  },
+  "epochs": 5,
+  "microbatch": 4,
+  "gradient_accumulation": 4,
+  "learning_rate": 0.001,
+  "encoder_learning_rate": 5e-05,
+  "save_steps": 50,
+  "precision": "auto",
+  "seed": 42
+}
