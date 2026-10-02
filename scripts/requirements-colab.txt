@@ -1,5 +1,7 @@
 # CUDA runtime execution pending. Mac forward-only import compatibility tested.
 # Python 3.13 is accepted pending Colab import/CUDA validation; keep exact pins.
+# Install pip into the target environment through the notebook's pip --python.
+pip==25.1.1
 torch==2.6.0
 transformers==4.51.3
 peft==0.15.2
