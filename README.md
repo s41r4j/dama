@@ -83,9 +83,10 @@ An optional offline upload archive can still be created with:
 python scripts/package_colab.py --output artifacts/bundles/dama-model-colab.zip
 ```
 
-The notebook calls portable commands, inspects CUDA/BF16/VRAM, performs an explicit
-three-step cloud smoke test, saves full resume state to Drive, and gates the real
-run behind a separate user action. macOS and CPU training are refused.
+The notebook calls portable commands, inspects CUDA/BF16/VRAM, and runs the explicit
+three-step cloud smoke test in section 2 without Drive permissions. Mount Drive
+before longer runs to persist full resume state. Research training remains gated
+behind a separate user action. macOS and CPU training are refused.
 
 After downloading a trained export:
 

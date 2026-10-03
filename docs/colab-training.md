@@ -54,7 +54,12 @@ training. The 80 shipped examples only test the mechanics.
 
 ## 3. Explicit cloud smoke test
 
-Mount Drive and choose a new persistent output directory. Run:
+Run section 2 of the notebook after setup. It downloads MiniLM and runs up to
+three CUDA optimizer steps immediately when that cell is executed. Each run uses
+a new timestamped directory under `/content/dama-runs`; no Drive mount is needed.
+These outputs are temporary, so download/copy any results you want to retain.
+
+For a persistent smoke run, mount Drive and choose a new output directory. Run:
 
 ```bash
 dama train --config configs/heads.json --data fixtures/model-v1 \
