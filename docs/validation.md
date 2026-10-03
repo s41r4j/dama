@@ -79,6 +79,13 @@ No training output directory was created by this command.
 
 ## Unverified and remaining research work
 
+3 October 2026: user-supplied Colab output confirms Python 3.13.15, Tesla T4,
+Torch 2.6.0+cu124, Transformers 4.51.3 and PEFT 0.15.2. Dependency/import checks,
+CUDA availability, configuration/data validation and all 35 tests passed (6.31s).
+No training started in that setup cell. The BF16 report included emulation under
+Torch's default check; automatic precision now checks native support explicitly
+and selects FP16 on T4. Pretrained forward/backward training remains unverified.
+
 Colab LoRA round-trip follow-up: the user reported 32 passing tests and one
 logit-comparison failure after setup/config/data validation completed. Local
 diagnostics reproduced an SDPA-to-eager attention change on artifact reload,
@@ -113,7 +120,7 @@ files include CPython 3.13 Linux x86-64 wheels. This is package availability evi
 not successful runtime execution. Setup now installs in a separate venv using the
 kernel's current Python and records its dependency/import/CUDA check output.
 
-Actual pretrained model inference, CUDA environment execution, GPU memory/latency,
+Actual pretrained model inference, GPU model memory/latency,
 optimizer updates, interruption/resume equivalence and trained quality remain
 unverified. Colab commands and notebook are prepared, not advertised as cloud-tested.
 The synthetic fixtures are insufficient for training a reliable general controller;

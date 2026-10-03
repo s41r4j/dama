@@ -26,8 +26,9 @@ and editable package into `/content/dama-env` using Colab's current Python versi
 Python 3.10–3.13 is accepted; the notebook no longer rejects 3.13 merely because
 local validation used 3.12. Torch 2.6.0 and NumPy 2.2.6 publish CPython 3.13 Linux
 x86-64 wheels. Full import/dependency/CUDA checks still have to pass in Colab.
-**CUDA execution has not been tested in this session.** No environment is
-advertised as CUDA-verified. No kernel restart or Python downgrade is required.
+User-provided Colab output confirms Python 3.13/T4 setup, CUDA availability,
+dependency consistency and 35 passing software tests. Actual pretrained model
+training still needs a cloud smoke run. No kernel restart or Python downgrade is required.
 Setup writes `/content/dama-setup.log` and starts no training.
 The environment is created with `venv --without-pip`; the notebook interpreter's
 pip manages it through `--python`, so Colab's missing/broken `ensurepip` does not
@@ -66,7 +67,7 @@ peak VRAM and `export/manifest.json`. It is not a useful training run or quality
 result. Sequence overflow is rejected rather than silently dropping evidence.
 Conservative settings are a starting point, not a guarantee against OOM.
 
-`precision=auto` selects BF16 when supported, otherwise FP16 with GradScaler.
+`precision=auto` selects BF16 when natively supported, otherwise FP16 with GradScaler.
 FP32 is available explicitly. Unsupported requested BF16 fails. Memory can be
 reduced with microbatch 1 or fewer candidates/shorter *prepared* inputs; changing
 limits requires rebuilding/revalidating the dataset rather than silently truncating.
