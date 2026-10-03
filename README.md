@@ -113,8 +113,9 @@ Local: active unit tests, frozen/LoRA forward paths, schema/mask/span checks,
 checkpoint round trips, fixture manifests, notebook syntax, CLI and Mac training
 refusal verified. [Validation report](docs/validation.md) records exact results.
 
-Cloud: CUDA environment execution, actual pretrained-encoder inference, optimizer
-steps, resume after interruption and trained quality/latency are **unverified**.
+Cloud: Python 3.13/T4 setup, CUDA availability and all 35 setup tests passed.
+Actual pretrained-encoder inference, optimizer steps, resume after interruption
+and trained quality/latency are **unverified**.
 Expand/review labels, measure the frozen-head baseline, then compare context-layer
 and LoRA ablations on a fixed held-out test. Confidence calibration and downstream
 answer/cost hypotheses remain research work.

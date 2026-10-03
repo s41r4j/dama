@@ -14,7 +14,7 @@ def require_cuda():
 
 
 def choose_precision(requested,torch):
-    bf16=torch.cuda.is_bf16_supported()
+    bf16=torch.cuda.is_bf16_supported(including_emulation=False)
     if requested=="bf16" and not bf16: raise ValueError("BF16 is unsupported on this GPU")
     selected=("bf16" if bf16 else "fp16") if requested=="auto" else requested
     return selected,{"bf16":torch.bfloat16,"fp16":torch.float16,"fp32":torch.float32}[selected]
@@ -24,7 +24,7 @@ def runtime():
     torch=require_cuda()
     free,total=torch.cuda.mem_get_info()
     return {"gpu":torch.cuda.get_device_name(),"vram_free_bytes":free,"vram_total_bytes":total,
-            "bf16_supported":torch.cuda.is_bf16_supported(),"torch":torch.__version__,"cuda":torch.version.cuda}
+            "bf16_supported":torch.cuda.is_bf16_supported(including_emulation=False),"torch":torch.__version__,"cuda":torch.version.cuda}
 
 
 def train(config_path,dataset_dir,output,*,resume=None,smoke=False,allow_synthetic=False):

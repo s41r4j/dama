@@ -150,13 +150,18 @@ def test_training_guard_runs_before_torch_import(monkeypatch):
     monkeypatch.setattr(platform,"system",lambda:"Darwin")
     with pytest.raises(RuntimeError,match="forbidden"): require_cuda()
 
-def test_precision_detection():
+@pytest.mark.parametrize("native_bf16",[False,True])
+def test_precision_detection(native_bf16):
     class GPU:
-        def is_bf16_supported(self): return False
+        def is_bf16_supported(self,including_emulation=True):
+            return including_emulation or native_bf16
     class Fake:
         cuda=GPU(); bfloat16="bf16"; float16="fp16"; float32="fp32"
-    assert choose_precision("auto",Fake())[0]=="fp16"
-    with pytest.raises(ValueError): choose_precision("bf16",Fake())
+    assert choose_precision("auto",Fake())[0]==("bf16" if native_bf16 else "fp16")
+    if native_bf16:
+        assert choose_precision("bf16",Fake())[0]=="bf16"
+    else:
+        with pytest.raises(ValueError): choose_precision("bf16",Fake())
 
 def test_lora_forward_and_artifact_without_training(network,tmp_path):
     base,tokenizer=network
