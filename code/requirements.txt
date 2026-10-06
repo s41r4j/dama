@@ -1,0 +1,7 @@
+# Colab already provides torch, numpy and pydantic; pip leaves them alone if satisfied.
+torch>=2.4
+numpy>=1.26
+pydantic>=2.7
+transformers==4.51.3
+peft==0.15.2
+safetensors==0.5.3

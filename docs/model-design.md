@@ -1,126 +1,127 @@
-# DAMA System One decision model
+# DAMA model design
 
-The deliverable is a **standalone learned decision model**, trained for memory tasks.
-The user's clarification supersedes the application-oriented handoff: do not build
-a Primary Agent, memory database, vector store, or conversational agent framework.
+DAMA is a standalone **learned decision model** for memory. It decides what to do with memory. It doesn't
+store memories, run an agent or answer questions. A caller (the Primary Agent's memory layer) applies the decision.
 
-## What the research supports
-
-The project concept calls for a fast specialized
-model that emits decisions and eventually uses multiple heads. The summary and gap
-PDFs are broader than the finalized report. The finalized comparison identifies
-write gating, temporal updates and retrieval routing as separate capabilities to
-measure, with no DAMA result yet. Earlier novelty language is not established.
-
-[MemRouter](https://arxiv.org/html/2605.00356), section 3.2, performs BGE chunk
-embedding -> trainable projection -> frozen Qwen2.5-7B body -> ADD/NOOP and type
-heads. Its ~12M is the *trainable* count, not the deployed count. This implementation
-adopts supervised forward-only decisions, not its complete backbone or reported
-results. Its paper's limits and the project's finalized comparison motivate measuring
-both admitted useful facts and rejected useful facts.
-
-[Jev's official description](https://typesafe.ai/blog/introducing-system-one-models-and-jev)
-emphasizes structured state, parallel typed outputs and calibrated decisions. It
-is conceptual inspiration. The public description does not disclose enough to
-reproduce Jev's weights, training recipe or capability. Type-safe output alone does
-not establish correctness or calibration. DAMA does not claim Jev equivalence.
-
-## Architecture implemented
+## The flow
 
 ```text
-observed text + recent context + task/time/role metadata
-candidate memory texts + status/validity metadata
-           |
-shared pretrained MiniLM encoder (mean pooling; frozen initially)
-           |
-384 -> 192 learned projection
-           |
-2-layer bidirectional candidate contextualizer
-(no candidate-position embeddings; order-equivariant)
-           |
-parallel heads:
-  operation: ADD / NOOP / UPDATE / ARCHIVE
-  memory type: key_fact / preference / plan / routine / emotional
-  candidate relevance: independent logits
-  update/archive target: candidate logits + null target
-  fallback: supported / needs more evidence
-  source span: start/end token logits on observed text
-           |
-typed decoding: IDs mapped from supplied candidates, exact source substring,
-invalid targets/spans abstain; scores explicitly uncalibrated
+ModelInput
+  task (write | retrieve), text, source_role, recent turns, temporal_mode
+  candidates: [id, text, status (current|superseded|archived), memory_type]
+        │
+batching.Collator  — items per example: [current text, recent turns, candidate 1..N]
+        │            only real texts are tokenized; nothing is ever truncated (overflow → abstain)
+        ▼
+pretrained encoder (MiniLM or BGE; frozen, or LoRA on query/value) ── token states of the current text ──┐
+        │ pooled vector per item                                                                         │
+        ├── raw cosine(current text, candidate)  ← the similarity MiniLM/BGE were trained for            │
+        ▼                                                                                                │
+projection + learned embeddings for structured state                                                     │
+  (item kind, task, role, temporal mode, candidate status, candidate type)                               │
+        ▼                                                                                                │
+2-layer transformer over the items (no position embeddings → candidate order cannot matter)              │
+        │                                                                                                │
+        ├─ event vector ──► operation (4) · memory type (5) · fallback (2)                               │
+        ├─ event × candidate pairs [e, c, e−c, e·c, cosine] ──► relevance (per candidate) · update/archive target (+ null)
+        └─ event vector + token states ──► evidence span start/end ◄─────────────────────────────────────┘
+        ▼
+inference.decode — typed Decision; abstains on: low confidence, non-user source (writes),
+                   target that is not a current candidate, invalid span, non-finite scores, overflow
 ```
 
-No token-by-token decoder, generated rationale, answering model, database or agent
-loop is involved. The encoder runs over event and candidate texts as one batched
-invocation; a contextualizer lets write decisions see possible duplicates/updates.
-Model artifacts record and restore the encoder attention implementation (eager or
-SDPA) to avoid changing the inference kernel silently after loading a checkpoint.
-Cost scales with candidate count and sequence length, not just head parameters.
-A single forward invocation is not constant-time with respect to input size.
+### Why it's built this way
 
-## Initial backbone and capacity
+- **Structured state is given as embeddings, not prose.** The earlier version wrote `status=current`, ISO timestamps
+  and other metadata into the text that a frozen sentence encoder averaged. That drowned out the message and hid the
+  most important signal for updates and historical queries: whether a memory is current or superseded.
+- **The message is encoded on its own**, and recent turns are encoded as a separate item. Mean pooling over
+  "metadata + history + message" blurred the message itself. Keeping recent turns lets the model handle replies like
+  "Oh, Linode." after "Which cloud provider do we use?".
+- **The raw cosine similarity is fed to the relevance and target heads.** MiniLM and BGE are trained so that this
+  similarity ranks relevant text, which gives the heads a strong prior from step one.
+- **The span head sees the contextualized event vector**, so the evidence it picks can depend on the candidates (for
+  an UPDATE, the new value).
+- **ARCHIVE is learned.** The old decoder only accepted the literal string `Archive memory <id>.`, so the ARCHIVE
+  head did nothing.
+- **Order equivariance and batch independence** were checked locally: reversing the candidates reverses the scores,
+  and a row's outputs don't change when it's batched with other rows.
 
-[all-MiniLM-L6-v2](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2)
-is an Apache-2.0 pretrained English encoder with 384-dimensional features. The
-exact revision is `1110a243fdf4706b3f48f1d95db1a4f5529b4d41`.
-Its model card gives the mean-pooling interface and 256-token default input limit.
-We use 256 as a strict per-text limit, with at most 32 candidates. Oversized inputs
-abstain explicitly; no text or evidence is silently truncated.
+### Size
 
-The instantiated architecture has 23,717,392 total parameters, of which 1,004,176
-are trainable with a frozen encoder. FP32 weights alone are approximately 90.5 MiB;
-activations, padding, runtime and CUDA allocations require additional memory.
-Counts were verified from the official pinned encoder config using meta tensors,
-without downloading weights.
+| Config | Total | Trainable |
+|---|---|---|
+| `minilm-frozen` (default) | 23.8M | 1.19M |
+| `minilm-lora` | 23.8M | 1.27M |
+| `bge-frozen` | 111.1M | 2.25M |
+| `bge-lora` | 111.4M | 2.54M |
 
-This is a concrete size/latency-oriented starting hypothesis, not a claim that a
-23.7M model handles every memory decision reliably. A 0.5B-1.5B decoder with decision
-heads may be a later capacity ablation if held-out errors justify it. Qwen2.5-1.5B
-JSON SFT would introduce autoregressive decoding and is no longer the default.
+## Data
+
+`dama.data.generate` writes about 10k synthetic examples (8000 train / 1200 dev / 1200 test). They cover 16 memory
+slots across all five types:
+- **key facts:** database, language, frontend, hosting, city, job
+- **preferences:** theme, drink, answer style, meeting time
+- **plans:** launch, trip
+- **routines:** backups, standup, exercise
+- **emotional:** mood
+
+There are 14 behaviours.
+
+| Write | Retrieve |
+|---|---|
+| add (fact inside chatty text → span is only the fact) | current value (with the outdated value as a hard negative) |
+| add from context (answer to the assistant's question) | historical value (`temporal_mode=historical`) |
+| duplicate → NOOP | missing memory → nothing relevant, fallback |
+| update (target = the *current* memory, not a superseded one) | off-topic request → nothing relevant, no fallback |
+| archive ("please forget my city") | all memories of a type ("What are my preferences?") |
+| hedged / hearsay → NOOP + fallback | |
+| chatter, prompt injection → NOOP | |
+| assistant/tool text → NOOP | |
+
+**Split by template and value.** Each message template and each slot value belongs to one split, so dev and test
+only contain phrasings and entities the model never saw in training. `generate` fails if any template group leaks
+across splits.
+
+**Limits of synthetic data.** It's still templated English with clean labels. High scores here show the model can
+learn the decision structure and generalise to new wording within these patterns. They don't show performance on
+real conversations. The next step for research is real logged conversations with reviewed labels, which can be
+saved in the same JSONL format.
 
 ## Training
 
-Supervised multitask losses: operation CE, type CE only when labeled, relevance
-BCE only on retrieval rows and real candidates, target CE only on writes,
-fallback CE, and source-span CE only for supported ADD/UPDATE rows. Masks prevent
-unlabeled heads and padded candidates from contributing. NOOP/ADD train null target.
-Start with the encoder frozen; train the projection, contextualizer and heads.
-Optional encoder LoRA (query/value, rank 8) is implemented and tested for forward
-and artifact loading. It must earn its extra cost on dev data. RL and foundation
-pretraining are deferred. QLoRA is unnecessary for this small encoder and is not
-claimed as a supported path.
+`dama.training.train(config, data_dir, output)`:
+- **Loss:** a multitask loss in which each head learns only from rows that carry its label (no relevance loss on
+  writes, no span loss on NOOPs, and so on).
+- **Optimizer:** AdamW with linear warmup and decay. LoRA adapters get their own learning rate.
+- **Precision:** FP16 on a T4, BF16 where it's natively supported.
+- **Selection:** dev is evaluated after every epoch, and the best epoch is exported to `output/export`. An export is
+  self-contained (weights, configs, tokenizer, SHA-256 hashes, attention kernel) and loads offline.
 
-A stronger candidate is [BAAI/bge-base-en-v1.5](https://huggingface.co/BAAI/bge-base-en-v1.5)
-(MIT), revision `a5beb1e3e68b9ab74eb54cfd186867f64f240e1a`.
-`accuracy-frozen.json` and `accuracy.json` compare frozen/LoRA adaptation. BGE uses
-CLS pooling per its official card, a 256-wide contextualizer, and microbatch 1.
-This is a capacity option, not a claimed measured accuracy improvement. Choose on
-the same reviewed dev data and evaluate final selected models on untouched test.
+## Evaluation
 
-The source-role and scope/time checks are interface constraints. The neural model
-must learn relevance, admission, corrections and abstention. Type checks cannot
-prove semantic correctness. An exact substring can still be an incorrect or
-irrelevant user claim. Human review remains necessary for research labels.
+`dama.evaluate.evaluate` reports:
+- **Writes:** operation accuracy and macro-F1 with a confusion matrix, type accuracy, target accuracy, span exact
+  match and token F1, write precision, and the share of useful writes missed.
+- **Retrieval:** precision, recall and F1.
+- **Fallback:** fallback accuracy.
+- **Calibration:** operation ECE.
+- **Speed:** p50/p95 latency and input tokens.
 
-## Evaluation boundary
+The notebook also prints accuracy per behaviour. Thresholds (0.6 operation, 0.5 relevance and fallback) are
+defaults. Tune them on dev only. Scores are uncalibrated probabilities.
 
-Measure model-level operation confusion, write precision and useful facts missed,
-relevance precision/recall, update-target accuracy, evidence-span exact match,
-fallback accuracy and ECE, as well as total input tokens, candidate count,
-forward-only latency, parameter count and resources. Keep whole source families,
-conversations, users and projects disjoint. A repeated syntax pattern in tiny
-software fixtures is not evidence of linguistic generalization.
+## How this relates to the research
 
-Default thresholds (0.6 operation, 0.5 relevance/fallback) are provisional, not
-tuned or calibrated. Tune only on development data and predeclare before final test.
-ECE currently reports raw operation confidence against raw argmax correctness;
-gated decision accuracy is reported separately. Empty evidence and low scores can
-abstain. Calibration, Brier/NLL, risk-coverage curves, bootstrap intervals and
-independent annotation agreement are required before deploying confidence as a
-probability; those research experiments have not run.
+| Work | What it measures | Relation to DAMA |
+|---|---|---|
+| MemRouter (2026) | ADD/NOOP write routing, ~12M trainable on a **frozen 7B** backbone; LoCoMo F1 52.0 vs 45.6 for an LLM manager; 970 → 58 ms p50 | Same idea (a small learned head instead of LLM decoding). DAMA covers more decisions (update target, archive, retrieval, span, fallback) on a 23.8M model, so its forward pass should be much cheaper. Not measured yet. |
+| SAGE (2026) | Novelty gate ADD/NOOP, escalates uncertain cases to an LLM | DAMA's fallback head plays the same role |
+| Mem0 (2025) | End-to-end LoCoMo QA with an LLM extractor; 91% lower p95 latency, >90% token savings vs full context | End-to-end system numbers. DAMA would be one component of such a system. |
+| Jev / System One (2026, vendor) | Typed, calibrated decisions; company-reported speed | Inspiration for the interface. DAMA scores are not calibrated yet. |
 
-The full-context/agent benchmarks and cost hypotheses in the old report apply to
-later downstream integration, not this standalone-model milestone. No Mem0/Letta
-installation is required. LoCoMo/LongMemEval QA answers must not become policy
-training labels. Any later use needs official pinned sources, clean conversation
-splits and separate end-to-end evaluation.
+None of these numbers can be compared directly with DAMA's synthetic test scores. The research reports
+**end-to-end QA** on LoCoMo or LongMemEval: a full memory system plus an answering LLM, judged on its answers. DAMA's
+test set measures **decision accuracy** on synthetic data. A fair comparison needs DAMA inside a memory pipeline,
+evaluated on LoCoMo or LongMemEval with the same answering model and official scoring, and never trained on their
+QA answers.

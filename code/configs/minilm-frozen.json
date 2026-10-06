@@ -1,0 +1,5 @@
+{
+  "model": {"encoder": "sentence-transformers/all-MiniLM-L6-v2", "encoder_revision": "1110a243fdf4706b3f48f1d95db1a4f5529b4d41",
+            "pooling": "mean", "encoder_mode": "frozen", "hidden_dim": 192, "context_layers": 2},
+  "epochs": 4, "batch_size": 16, "learning_rate": 0.001
+}

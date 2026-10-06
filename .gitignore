@@ -1,34 +1,16 @@
-# Local environments and Python/build caches
+# Local environment and caches
 .venv/
 __pycache__/
 *.py[cod]
-.pytest_cache/
-*.egg-info/
-build/
-dist/
 .DS_Store
-
-# Secrets and local databases
 .env
-.env.*
-!.env.example
-*.sqlite*
 
-# Generated experiment outputs; keep the directory guide visible
-/artifacts/*
-!/artifacts/README.md
-/outputs/
-/checkpoints/
+# Generated data, runs and model exports
+/artifacts/
+/dama-data/
+/dama-runs/
 *.safetensors
-*.gguf
 *.pt
-*.pth
 
-# Optional future downloaded baseline repositories
-/experiments/baselines/
-
-# Local reference collections and superseded snapshots are not model source.
+# Local reference collection (papers, reports, slides)
 /research/
-/archive/
-/experiments/
-/docs/reorganization.md
