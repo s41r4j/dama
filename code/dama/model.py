@@ -113,7 +113,7 @@ class DAMADecisionModel(nn.Module):
 
 def masked_ce(logits, labels):
     active = labels >= 0
-    return F.cross_entropy(logits[active].float(), labels[active]) if active.any() else logits.sum() * 0
+    return F.cross_entropy(logits[active].float(), labels[active]) if active.any() else logits.new_zeros((), dtype=torch.float32)
 
 
 def decision_loss(outputs, labels, candidate_mask):
@@ -126,5 +126,5 @@ def decision_loss(outputs, labels, candidate_mask):
               "span_end": masked_ce(outputs["end_logits"], labels["end"])}
     active = (labels["relevance"] >= 0) & candidate_mask
     logits = outputs["relevance_logits"]
-    losses["relevance"] = F.binary_cross_entropy_with_logits(logits[active].float(), labels["relevance"][active]) if active.any() else logits.sum() * 0
+    losses["relevance"] = F.binary_cross_entropy_with_logits(logits[active].float(), labels["relevance"][active]) if active.any() else logits.new_zeros((), dtype=torch.float32)
     return sum(losses.values()), {k: float(v.detach()) for k, v in losses.items()}

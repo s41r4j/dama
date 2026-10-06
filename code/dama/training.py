@@ -85,7 +85,7 @@ def train(config, data_dir, output, *, smoke=False, log=print):
             torch.nn.utils.clip_grad_norm_(heads + adapters, config.grad_clip)
             scaler.step(optimizer); scaler.update(); scheduler.step(); step += 1
             if step % 50 == 0 or smoke:
-                log(f"step {step}/{total} loss {float(loss):.4f}")
+                log(f"step {step}/{total} loss {loss.item():.4f}")
         metrics = evaluate(Predictor(model, tokenizer, device="cuda"), dev_rows)
         current = score(metrics)
         history.append({"epoch": epoch, "step": step, "dev_score": current, "seconds": time.time() - started, **{k: v for k, v in metrics.items() if k != "confusion"}})
