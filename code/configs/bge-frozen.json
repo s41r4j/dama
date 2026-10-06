@@ -1,0 +1,5 @@
+{
+  "model": {"encoder": "BAAI/bge-base-en-v1.5", "encoder_revision": "a5beb1e3e68b9ab74eb54cfd186867f64f240e1a",
+            "pooling": "cls", "encoder_mode": "frozen", "hidden_dim": 256, "context_layers": 2},
+  "epochs": 4, "batch_size": 16, "learning_rate": 0.001
+}
