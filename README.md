@@ -19,6 +19,7 @@ tiny random encoder. **No trained checkpoint or measured accuracy exists yet.** 
 | `code/colab/DAMA_Colab.ipynb` | Setup → generate data → train → test → try → save |
 | `code/requirements.txt` | Dependencies (Colab already has torch) |
 | `docs/model-design.md` | How the model works, the data, evaluation and how it relates to the research |
+| `docs/making-of-dama.md` | Dated notes on how DAMA was built: idea, research, v1, rewrite, bugs |
 | `research/` | Papers, reports, slides (git-ignored) |
 
 ## Train on Colab
