@@ -2,8 +2,6 @@
 
 Research implementation of DAMA, a memory system for language model agents. The repository contains the memory agent, model training and export pipeline, benchmark adapters, and experiment scripts.
 
-**Author:** [s41r4j](https://github.com/s41r4j)
-
 **Code:** [github.com/s41r4j/dama](https://github.com/s41r4j/dama)
 
 ## Repository structure
