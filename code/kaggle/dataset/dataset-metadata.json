@@ -1,0 +1,12 @@
+{
+ "title": "DAMA code",
+ "id": "s41r4j/dama-code",
+ "licenses": [
+  {
+   "name": "other"
+  }
+ ],
+ "subtitle": "Code of the DAMA Memory Agent: Tier-1 training, agent, benchmarks (start here)",
+ "description": "# DAMA: project map (start here)\n\nDAMA (Dual Agent Memory Architecture): a big Primary LLM answers; a small, fast Memory Agent beside it decides what to\nstore, update or forget and pushes a compact memory packet within ~100 ms on CPU. Judged on 4 pillars: 1 speed,\n2 accuracy, 3 context saving, 4 multi-agent. All items below are private.\n\n| Item | Kind | Role | Runs on |\n|---|---|---|---|\n| **DAMA code** (this dataset) | Dataset | the code: `dama_train/` (Level 1 training), `dama_agent/` (Memory Agent, Level 2 evaluation, Level 3 scoring, GPU runtime), `notebooks/`, `tests/`. One version per change | \u2014 |\n| **DAMA Tier1 Training** (`dama-tier1-training`) | Notebook | Level 1: build data, train retriever + decision + op models, calibrate, export; registers each checkpoint in the Model below. One version per checkpoint with its full output | T4 GPU, ~35 min |\n| **DAMA Tier-1 Models** (`dama-tier1`) | Model | every checkpoint: CPU bundle (`other/tier1`) and PyTorch weights (`transformers/tier1-pytorch`) | \u2014 |\n| **DAMA Evaluation** (`dama-evaluation`) | Notebook | Levels 2 + 3: the Memory Agent on held-out LoCoMo with the CPU bundle and on GPU; 4-pillar metrics; answer accuracy (LoCoMo F1 + LLM judge) vs no memory and gold evidence | T4 GPU, ~40 min |\n| **DAMA Paper v0** (`dama-paper-v0`) | Notebook | the paper experiments: baselines (full context, recent window, cross-encoder, Mem0), DAMA v0/v1, push/pull/sidecar, ablations, conformal checks, latency | T4 GPU, ~10 h |\n\nResults, history and decisions live in the repository docs: `docs/making-of-dama.md` (changelog + checkpoint table),\n`docs/risk.md`, `docs/4-pillars-of-dama.md`, `docs/handover.md`.",
+ "keywords": []
+}

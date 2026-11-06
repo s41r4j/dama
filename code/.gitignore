@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+dama_work/
+*.onnx
+*.onnx.data
+*.zip
+.ipynb_checkpoints/

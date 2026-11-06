@@ -1,7 +1,10 @@
-# Colab already provides torch, numpy and pydantic; pip leaves them alone if satisfied.
-torch>=2.4
-numpy>=1.26
-pydantic>=2.7
-transformers==4.51.3
-peft==0.15.2
-safetensors==0.5.3
+# Training (Colab / Kaggle / local). PyTorch is preinstalled on Colab and Kaggle - it is deliberately
+# not listed here so pip never replaces the notebook's CUDA build. Locally: install torch first.
+transformers>=4.44
+datasets>=2.19
+huggingface_hub>=0.23
+safetensors>=0.4
+numpy>=1.24
+onnx>=1.16
+onnxruntime>=1.18
+onnxscript>=0.1

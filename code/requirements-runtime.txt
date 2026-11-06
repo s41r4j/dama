@@ -1,0 +1,4 @@
+# What the Memory Agent needs to *use* the exported models on CPU (no PyTorch, no GPU).
+numpy>=1.24
+onnxruntime>=1.18
+transformers>=4.44

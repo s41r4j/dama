@@ -1,0 +1,9 @@
+{
+ "ownerSlug": "s41r4j",
+ "slug": "dama-tier1",
+ "title": "DAMA Tier-1 Models",
+ "subtitle": "CPU models of the DAMA Memory Agent: retriever, decision heads, write-op classifier",
+ "isPrivate": true,
+ "description": "# DAMA Tier-1 models\n\nThe small CPU models of the DAMA Memory Agent (Dual Agent Memory Architecture). One version per checkpoint (L1.x); the\nversion notes carry the label. Private.\n\n| Variation | What | Use |\n|---|---|---|\n| `other/tier1` | CPU bundle: retriever (bge-small, fine-tuned), decision model (MiniLM-L6: rel / sal / need / route), op model (DeBERTa-v3-xsmall: ADD / UPDATE / DELETE / NOOP), tokenizers, `runtime.py`, `dama_tier1.json`, plus `CHECKPOINT.json`, `report.json`, `calibration.json`, `code_snapshot.zip` | `dama_agent.load_tier1(folder)` (only numpy + onnxruntime + transformers tokenizers) |\n| `transformers/tier1-pytorch` | the trained PyTorch models (`retriever/`, `decision/`, `ops/`) | continue training without starting over |\n\n| Model version (`other/tier1`) | Checkpoint |\n|---|---|\n| 1 | L1.1 |\n| 2 | L1.2 |\n\nProduced by the notebook `s41r4j/dama-tier1-training`; code in the dataset `s41r4j/dama-code`.",
+ "publishTime": null
+}
